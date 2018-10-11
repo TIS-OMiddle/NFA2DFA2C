@@ -29,6 +29,7 @@ namespace NFA2DFA2C {
     public class NfaPair {
         public NfaNode start;
         public NfaNode end;
+        public int count = 0;
     }
 
     public class NfaManager {
@@ -49,6 +50,7 @@ namespace NFA2DFA2C {
 
             np.start = s;
             np.end = e;
+            np.count += 2;
             return np;
         }
         //由字符串表示的字符集构建单个自动机
@@ -94,13 +96,15 @@ namespace NFA2DFA2C {
 
             np.start = s;
             np.end = e;
+            np.count += 2;
             return np;
         }
-        //连接两个自动机
+        //连接&与运算自动机
         private static NfaPair CombineNfaPair(NfaPair before, NfaPair after) {
             before.end.edge = -1;
             before.end.next1 = after.start;
             before.end = after.end;
+            before.count += after.count;
             return before;
         }
         //形成|或运算自动机
@@ -108,6 +112,12 @@ namespace NFA2DFA2C {
             NfaPair np = new NfaPair();
             np.start = new NfaNode();
             np.end = new NfaNode();
+            np.count += 2;
+            if (np1.count < np2.count) {
+                NfaPair t = np1;
+                np1 = np2;
+                np2 = t;
+            }
 
             np.start.edge = -1;
             np.start.next1 = np1.start;
@@ -118,6 +128,7 @@ namespace NFA2DFA2C {
             np2.end.edge = -1;
             np2.end.next1 = np.end;
 
+            np.count += np1.count + np2.count;
             return np;
         }
         //形成*闭包自动机
@@ -126,6 +137,7 @@ namespace NFA2DFA2C {
             NfaNode before = new NfaNode(), after = new NfaNode();
             np.start = before;
             np.end = after;
+            np.count += 2;
             //前面连接
             before.next1 = nfaPair.start;
             before.edge = -1;
@@ -136,6 +148,7 @@ namespace NFA2DFA2C {
             nfaPair.end.next2 = nfaPair.start;
             before.next2 = after;
 
+            np.count += nfaPair.count;
             return np;
         }
         //形成+闭包自动机
@@ -144,6 +157,7 @@ namespace NFA2DFA2C {
             NfaNode before = new NfaNode(), after = new NfaNode();
             np.start = before;
             np.end = after;
+            np.count += 2;
             //前面连接
             before.next1 = nfaPair.start;
             before.edge = -1;
@@ -152,7 +166,7 @@ namespace NFA2DFA2C {
             nfaPair.end.edge = -1;
             //原来尾连头
             nfaPair.end.next2 = nfaPair.start;
-
+            np.count += nfaPair.count;
             return np;
         }
         //形成?闭包自动机
@@ -161,6 +175,7 @@ namespace NFA2DFA2C {
             NfaNode before = new NfaNode(), after = new NfaNode();
             np.start = before;
             np.end = after;
+            np.count += 2;
             //前面连接
             before.next1 = nfaPair.start;
             before.edge = -1;
@@ -169,152 +184,130 @@ namespace NFA2DFA2C {
             nfaPair.end.edge = -1;
             //现在头连尾
             before.next2 = after;
-
+            np.count += nfaPair.count;
             return np;
         }
-        //简单情况，形成只有+?*的闭包、字符、[]字符集的自动机
-        private static NfaPair EasyCondition(string pattern) {
-            int len = pattern.Length;
-            if (len == 0) return null;
 
-            //开始处理第一个
-            NfaPair root;
-            List<NfaPair> list = new List<NfaPair>();
-            int pos;
-            if (pattern[0] == '[') {
-                pos = -1;
-            }
-            else {
-                root = CreatNfaPair(pattern[0]);
-                pos = 0;
-                list.Add(root);
-            }
-            for (int i = pos + 1; i < len; i++) {
-                switch (pattern[i]) {
-                    case '*': list[pos] = DoStarCollapse(list[pos]); break;
-                    case '+': list[pos] = DoPosCollapse(list[pos]); break;
-                    case '?': list[pos] = DoQuestCollapse(list[pos]); break;
-                    case '[':
-                        int j = i;
-                        while (pattern[j] != ']') {
-                            ++j;
-                        }
-                        list.Add(CreatNfaPair(pattern.Substring(i + 1, j - i - 1)));
-                        i = j;
-                        ++pos;
-                        break;
-                    default:
-                        list.Add(CreatNfaPair(pattern[i]));
-                        ++pos;
-                        break;
+
+
+        //后缀表达式
+        private static Stack<NfaPair> npstack = new Stack<NfaPair>();//自动机栈
+        private static Stack<char> opstack = new Stack<char>();//操作符栈,使用'\r'代表连接操作,'\n'代表起末标志
+        private static HashSet<char> isop = new HashSet<char> {'|', '*', '+', '?', '\n', '(', ')','\r' };
+        //全局运算组织
+        public static NfaPair GetNfaPair(string pattern) {
+            //补上连接运算符号
+            int len = pattern.Length, pos = 0;
+            for(int i = 0; i < pattern.Length-1; i++) {
+                if (pattern[i] == '[') {
+                    while (pattern[i] != ']')
+                        ++i;
+                }
+                if (i < pattern.Length - 1&&!isop.Contains(pattern[i])||pattern[i]==')') {
+                    char cc = pattern[i + 1];
+                    if (cc!='*'&& cc != '+' && cc != '?' && cc != '|' && cc != ')') {
+                        pattern = pattern.Insert(i + 1, "\r");
+                        ++i;
+                    }
                 }
             }
-            root = list[0];
-            for (int i = 1; i <= pos; i++) {
-                root = CombineNfaPair(root, list[i]);
+            //开始操作
+            opstack.Push('\n');
+            pattern += "\n";
+            char c;
+            NfaPair npf;
+            while (opstack.Count != 0) {
+                c = pattern[pos++];
+                //c不是操作符，则构建运算用nfa自动机
+                if (c == '[') {
+                    int i = pos;
+                    while (pattern[i] != ']')
+                        ++i;
+                    npf = CreatNfaPair(pattern.Substring(pos, i - pos));
+                    pos = i + 1;
+                    npstack.Push(npf);
+                }
+                else if (!isop.Contains(c)) {
+                    npf = CreatNfaPair(c);
+                    npstack.Push(npf);
+                }
+                //c是操作符
+                else {
+                    if(c == '*' || c == '+' || c == '?') {
+                        DoOperator(c);
+                    }
+                    else if (Isp(opstack.Peek()) < Icp(c)) { opstack.Push(c); }//c优先度高，直接进栈
+                    else if (Isp(opstack.Peek()) > Icp(c))//c优先度小，进栈前先清空可运算
+                    {
+                        while (Isp(opstack.Peek()) > Icp(c)) DoOperator(opstack.Pop());//清空可运算
+                        if (c == ')'||c=='\n') opstack.Pop();//弹出'('或'\n'
+                        else opstack.Push(c);//本次读取的操作符进栈
+                    }
+                    else opstack.Pop();//弹出'('或'\n'
+                }
             }
-            return root;
+            return npstack.Pop();
         }
-        //普通情况，在简单的基础上增加|的处理
-        public static NfaPair NormalCondition(string pattern) {
-            if (pattern.Length == 0) return null;
-            string[] patterns = pattern.Split('|');
-            int len = patterns.Length;
-            int[] pattnodes = new int[len];
-            NfaPair[] nps = new NfaPair[len];
-            for (int i = 0; i < len; i++)
-                nps[i] = EasyCondition(patterns[i]);
-            //由长到短
-            for (int i = 0; i < len; i++) {
-                pattnodes[i] = 0;
-                for (int j = 0; j < patterns[i].Length; j++) {
-                    if (patterns[i][j] == '[') {
-                        while (patterns[i][j] != ']') {
-                            j++;
-                        }
-                        pattnodes[i] += 2;
-                    }
-                    else if (patterns[i][j] == '*' || patterns[i][j] == '+' || patterns[i][j] == '?')
-                        pattnodes[i] += 4;
-                    else pattnodes[i] += 2;
-                }
+        //栈外操作符优先度
+        private static int Isp(char c) {
+            switch (c) {
+                case '\n': return 0;//最低，后面任何符号都可以进栈
+                case '(': return 1;
+                case '|': return 3;
+                case '\r': return 5;
+                case '*': return 5;
+                case '+': return 5;
+                case '?': return 5;
+                case ')': return 7;
+                default: return -1;
             }
-            //从大到小排序调整
-            for (int i = 0; i < len; i++) {
-                for (int j = i + 1; j < len; j++) {
-                    if (pattnodes[i] < pattnodes[j]) {
-                        int t = pattnodes[i];
-                        pattnodes[i] = pattnodes[j];
-                        pattnodes[j] = t;
-
-                        NfaPair np = nps[i];
-                        nps[i] = nps[j];
-                        nps[j] = np;
-                    }
-                }
-            }
-
-            for (int i = 1; i < len; i++) {
-                nps[0] = EitherNfaPair(nps[0], nps[i]);
-            }
-            return nps[0];
         }
-        //困难情况，在普通的基础上增加()的处理
-        public static NfaPair HardCondition(string pattern) {
-            int len = pattern.Length;
-            if (len == 0) return null;//空字符串抛出null
-            NfaPair root;
-
-            //获取最内括号对
-            int left = len - 1, right;
-            while (left >= 0 && pattern[left] != '(')
-                --left;
-            //没有'('
-            if (left < 0) return NormalCondition(pattern);
-            //搜索')'，形成最初root
-            right = left;
-            while (pattern[right] != ')')
-                ++right;
-            root = NormalCondition(pattern.Substring(left + 1, right - left - 1));
-
-            //左右两侧搜索
-            int p = left - 1, q = right + 1;
-            NfaPair temp;
-            while (left >= 0) {
-                //左边
-                while (p >= 0 && pattern[p] != '(')
-                    --p;
-                temp = NormalCondition(pattern.Substring(p + 1, left - p - 1));
-                if (temp != null)
-                    root = CombineNfaPair(temp, root);
-                left = p--;
-
-                //右边
-                while (q < len && pattern[q] != ')')
-                    q++;
-                temp = NormalCondition(pattern.Substring(right + 1, q - right - 1));
-                if (temp != null)
-                    root = CombineNfaPair(root, temp);
-                //预读一个判断闭包
-                if (q + 1 < len) {
-                    switch (pattern[q+1]) {
-                        case '*':
-                            root = DoStarCollapse(root);
-                            ++q;
-                            break;
-                        case '+':
-                            root = DoPosCollapse(root);
-                            ++q;
-                            break;
-                        case '?':
-                            root = DoQuestCollapse(root);
-                            ++q;
-                            break;
-                    }
-                }
-                right = q++;
+        //栈外操作符优先度
+        private static int Icp(char c) {
+            switch (c) {
+                case '\n': return 0;//最低，清空栈以运算
+                case ')': return 1;
+                case '|': return 2;
+                case '\r': return 4;
+                case '*': return 6;
+                case '+': return 6;
+                case '?': return 6;
+                case '(': return 7;
+                default: return -1;
             }
-            return root;
+        }
+        //根据操作op操作nfastack
+        private static void DoOperator(char op) {
+            NfaPair left, right, result;
+            switch (op) {
+                case '|':
+                    right = npstack.Pop();
+                    left = npstack.Pop();
+                    result = EitherNfaPair(left, right);
+                    npstack.Push(result);
+                    break;
+                case '\r':
+                    right = npstack.Pop();
+                    left = npstack.Pop();
+                    result = CombineNfaPair(left, right);
+                    npstack.Push(result);
+                    break;
+                case '*':
+                    right = npstack.Pop();
+                    result= DoStarCollapse(right);
+                    npstack.Push(result);
+                    break;
+                case '+':
+                    right = npstack.Pop();
+                    result = DoPosCollapse(right);
+                    npstack.Push(result);
+                    break;
+                case '?':
+                    right = npstack.Pop();
+                    result = DoQuestCollapse(right);
+                    npstack.Push(result);
+                    break;
+            }
         }
 
 

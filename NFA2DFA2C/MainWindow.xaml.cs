@@ -24,8 +24,8 @@ namespace NFA2DFA2C {
         }
 
         private void Init() {
-            var c1 = NfaManager.HardCondition("(a)*");
-            NfaManager.DrawNfaPair(canvas_nfa, c1);
+            //var c1 = NfaManager.GetNfaPair("[a]|b*");
+            //NfaManager.DrawNfaPair(canvas_nfa, c1);
         }
 
         private void bt_creat_Click(object sender, RoutedEventArgs e) {
@@ -34,8 +34,8 @@ namespace NFA2DFA2C {
             NfaManager.Clear();
 
             string pattern = tb_input.Text;
-            var c1 = NfaManager.HardCondition(pattern);
-            NfaManager.DrawNfaPair(canvas_nfa, c1);
+            var np = NfaManager.GetNfaPair(pattern);
+            NfaManager.DrawNfaPair(canvas_nfa, np);
         }
 
         private void tb_input_KeyUp(object sender, KeyEventArgs e) {
