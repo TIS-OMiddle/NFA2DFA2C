@@ -198,14 +198,16 @@ namespace NFA2DFA2C {
         public static NfaPair GetNfaPair(string pattern) {
             //补上连接运算符号
             int len = pattern.Length, pos = 0;
-            for(int i = 0; i < pattern.Length-1; i++) {
+            char t, t_c;
+            for (int i = 0; i < pattern.Length-1; i++) {
                 if (pattern[i] == '[') {
                     while (pattern[i] != ']')
                         ++i;
                 }
-                if (i < pattern.Length - 1&&!isop.Contains(pattern[i])||pattern[i]==')') {
-                    char cc = pattern[i + 1];
-                    if (cc!='*'&& cc != '+' && cc != '?' && cc != '|' && cc != ')') {
+                t = pattern[i];
+                if (i < pattern.Length - 1&&t!='|'&&t!='(') {
+                    t_c = pattern[i + 1];
+                    if (t_c!='*'&& t_c != '+' && t_c != '?' && t_c != '|' && t_c != ')') {
                         pattern = pattern.Insert(i + 1, "\r");
                         ++i;
                     }
@@ -233,14 +235,15 @@ namespace NFA2DFA2C {
                 }
                 //c是操作符
                 else {
-                    if(c == '*' || c == '+' || c == '?') {
-                        DoOperator(c);
-                    }
-                    else if (Isp(opstack.Peek()) < Icp(c)) { opstack.Push(c); }//c优先度高，直接进栈
+                    //if(c == '*' || c == '+' || c == '?') {
+                    //    DoOperator(c);
+                    //}
+                    //else 
+                    if (Isp(opstack.Peek()) < Icp(c)) { opstack.Push(c); }//c优先度高，直接进栈
                     else if (Isp(opstack.Peek()) > Icp(c))//c优先度小，进栈前先清空可运算
                     {
                         while (Isp(opstack.Peek()) > Icp(c)) DoOperator(opstack.Pop());//清空可运算
-                        if (c == ')'||c=='\n') opstack.Pop();//弹出'('或'\n'
+                        if (c == ')' || c == '\n') opstack.Pop();//弹出'('或'\n'
                         else opstack.Push(c);//本次读取的操作符进栈
                     }
                     else opstack.Pop();//弹出'('或'\n'
@@ -518,7 +521,7 @@ namespace NFA2DFA2C {
 
 
 
-        //初始化
+        //重置
         public static void Clear() {
             NfaNode.totalNfaNode = 0;
         }

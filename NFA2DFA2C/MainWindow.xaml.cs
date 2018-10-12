@@ -24,7 +24,7 @@ namespace NFA2DFA2C {
         }
 
         private void Init() {
-            //var c1 = NfaManager.GetNfaPair("[a]|b*");
+            //var c1 = NfaManager.GetNfaPair("a|b*c");
             //NfaManager.DrawNfaPair(canvas_nfa, c1);
         }
 
