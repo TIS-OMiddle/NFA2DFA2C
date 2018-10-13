@@ -19,11 +19,72 @@ namespace NFA2DFA2C {
         public int edge = -3;//-3:无边，-2有字符集合charset，-1为ε，其他则为该边字符
         public NfaNode next1;//连线节点1
         public NfaNode next2;//连线节点2
-        public HashSet<byte> charset;//字符集
+        public HashSet<int> charset;//字符集
         public string charsetstring;//字符集对应的正则字符串
         public int nodenum;//节点编号
         public int deep;//节点深度
         public int deepnum;//depp深度上的第几个
+
+        //获取ε闭包集合
+        public HashSet<int> GetClosure() {
+            HashSet<int> set = new HashSet<int>();
+            set.Add(nodenum);
+            if (edge != -1)
+                return set;
+            if (next1 != null) {
+                HashSet<int> lset = next1.GetClosure();
+                foreach (var i in lset) {
+                    set.Add(i);
+                }
+            }
+            if (next2 != null) {
+                HashSet<int> rset = next2.GetClosure();
+                foreach (var i in rset) {
+                    set.Add(i);
+                }
+            }
+            return set;
+        }
+        //获取经过指定字符的闭包
+        public HashSet<int> GetClosureWithChar(int c) {
+            HashSet<int> set = new HashSet<int>();
+            if (edge == c)
+                set.Add(next1.nodenum);
+            else return set;
+            if (next1 != null) {
+                HashSet<int> lset = next1.GetClosure();
+                foreach (var i in lset) {
+                    set.Add(i);
+                }
+            }
+            if (next2 != null) {
+                HashSet<int> rset = next2.GetClosure();
+                foreach (var i in rset) {
+                    set.Add(i);
+                }
+            }
+            return set;
+        }
+        //获取经过指定字符集的闭包
+        public HashSet<int> GetClosureWithChar(string c) {
+            HashSet<int> set = new HashSet<int>();
+            if (charsetstring == c)
+                set.Add(next1.nodenum);
+            else return set;
+            if (next1 != null && next1.edge == -1) {
+                HashSet<int> lset = next1.GetClosure();
+                foreach (var i in lset) {
+                    set.Add(i);
+                }
+            }
+            if (next2 != null && next2.edge == -1) {
+                HashSet<int> rset = next2.GetClosure();
+                foreach (var i in rset) {
+                    set.Add(i);
+                }
+            }
+            return set;
+        }
     }
 
     public class NfaPair {
@@ -34,7 +95,9 @@ namespace NFA2DFA2C {
 
     public class NfaManager {
         //辅助变量
-        public static NfaNode[] nfanodes;
+        public static NfaNode[] nfanodes;//快速查找对应序号的节点
+        public static HashSet<int> chars = new HashSet<int>();
+        public static HashSet<string> charstrings = new HashSet<string>();
         private static bool[] visited;//深度遍历
         private static int[] deeps;//对应深度节点数
 
@@ -70,22 +133,22 @@ namespace NFA2DFA2C {
             NfaNode s = new NfaNode(), e = new NfaNode();
             s.edge = -2;
             s.charsetstring = charsetstring;
-            HashSet<byte> set = new HashSet<byte>();
+            HashSet<int> set = new HashSet<int>();
             int len = charsetstring.Length;
             //加入集合
             for (int i = startpos; i < len; i++) {
                 //预读下一字符，如果为连字符则
                 if ((i + 1) < len && charsetstring[i + 1] == '-') {
                     for (int j = charsetstring[i]; j <= charsetstring[i + 2]; j++)
-                        set.Add((byte)j);
+                        set.Add((int)j);
                     i += 2;
                 }
-                else set.Add((byte)charsetstring[i]);
+                else set.Add((int)charsetstring[i]);
             }
             //取反标准ASCII的128个字符
             if (isneg) {
-                HashSet<byte> temp = new HashSet<byte>();
-                for (byte i = 0; i <= 127; i++) {
+                HashSet<int> temp = new HashSet<int>();
+                for (int i = 0; i <= 127; i++) {
                     if (!set.Contains(i))
                         temp.Add(i);
                 }
@@ -235,10 +298,6 @@ namespace NFA2DFA2C {
                 }
                 //c是操作符
                 else {
-                    //if(c == '*' || c == '+' || c == '?') {
-                    //    DoOperator(c);
-                    //}
-                    //else 
                     if (Isp(opstack.Peek()) < Icp(c)) { opstack.Push(c); }//c优先度高，直接进栈
                     else if (Isp(opstack.Peek()) > Icp(c))//c优先度小，进栈前先清空可运算
                     {
@@ -319,14 +378,22 @@ namespace NFA2DFA2C {
         private static int radius = 15;//节点圆形半径
         private static int distanceX = 60;//节点横向基本距离
         private static int distanceY = 50;//节点纵向基本距离
-        //遍历一次树，计算深度、同深度节点数量，重置交由DrawNfaPair处理
+        //遍历一次树，计算深度、同深度节点数量、可能字符、序号入数组，重置交由DrawNfaPair处理
         private static void DFS(NfaNode root) {
             _DFS(root, 0);
         }
         private static void _DFS(NfaNode node, int deep) {
             if (node != null && !visited[node.nodenum]) {
                 node.deep = deep + 1;
+                //可能字符、序号入数组
+                if (node.edge == -2) {
+                    charstrings.Add(node.charsetstring);
+                }
+                else if (node.edge >= 0) {
+                    chars.Add(node.edge);
+                }
                 nfanodes[node.nodenum] = node;
+
                 visited[node.nodenum] = true;
                 node.deepnum = ++deeps[node.deep];
 
@@ -524,6 +591,8 @@ namespace NFA2DFA2C {
         //重置
         public static void Clear() {
             NfaNode.totalNfaNode = 0;
+            chars = new HashSet<int>();
+            charstrings = new HashSet<string>();
         }
     }
 }
