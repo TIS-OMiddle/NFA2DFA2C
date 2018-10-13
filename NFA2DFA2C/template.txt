@@ -1,0 +1,20 @@
+﻿bool Analyze(char* input)
+{
+  //state -1代表匹配正确，-2代表错误
+  int state = 0, pos = 0;
+  char c;
+  bool isMatch;
+  
+  while (state>=0)
+  {
+    isMatch = false;
+    switch (state)
+    {
+{0}
+    }
+  }
+  
+  if (state == -1)
+    return true;
+  else return false;
+}

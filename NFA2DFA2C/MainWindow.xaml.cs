@@ -52,6 +52,9 @@ namespace NFA2DFA2C {
             DfaManager.DrawDfa(lv_dfa, np);
             //作表DfaMin
             DfaManager.DrawDfaMin(lv_dfa_min);
+            //显示生成代码
+            string code = DfaManager.GetCode();
+            tb_output.Text = code;
         }
 
         private void tb_input_KeyUp(object sender, KeyEventArgs e) {

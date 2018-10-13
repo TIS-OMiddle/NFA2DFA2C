@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -56,6 +57,8 @@ namespace NFA2DFA2C {
     public class DfaManager {
         private static List<HashSet<int>> queue = new List<HashSet<int>>();
         private static List<DfaNode> dfanodes = new List<DfaNode>();
+        private static List<string> mychars = new List<string>();
+        private static List<string> mycharstrings = new List<string>();
         //最小化后的节点关系
         public static List<List<string>> dfanodes_min = new List<List<string>>();
         //判断集合是否在队列
@@ -76,19 +79,6 @@ namespace NFA2DFA2C {
                 }
             }
             return true;
-        }
-        //判断DfaNode是否相等
-        private static bool EqualDfaNode(DfaNode a,DfaNode b) {
-            if (a.isEnd == b.isEnd) {
-                for (int i = 0; i < a.data.Count; i++) {
-                    if (!EqualSet(a.data[i], b.data[i])) {
-                        return false;
-                    }
-                }
-                return true;
-            }
-            //终态不对应，不相等
-            return false;
         }
         //判断DfaNode_MIN是否相等
         private static bool EqualDfaNode_MIN(List<string> a, List<string> b) {
@@ -174,12 +164,14 @@ namespace NFA2DFA2C {
             foreach (var item in NfaManager.chars) {
                 GridViewColumn c = new GridViewColumn();
                 c.Header = ((char)item).ToString();
+                mychars.Add(((char)item).ToString());
                 c.DisplayMemberBinding = new Binding(string.Format("DATA[{0}]", counts++));
                 gv.Columns.Add(c);
             }
             foreach (var item in NfaManager.charstrings) {
                 GridViewColumn c = new GridViewColumn();
                 c.Header = item;
+                mycharstrings.Add(item);
                 c.DisplayMemberBinding = new Binding(string.Format("DATA[{0}]", counts++));
                 gv.Columns.Add(c);
             }
@@ -247,6 +239,101 @@ namespace NFA2DFA2C {
                 gv.Columns.Add(c);
             }
             lv.ItemsSource = dfanodes_min;
+        }
+        //由字符集字符串生成真正的字符集
+        private static HashSet<string> GetRealCharStringSet(string charsetstring) {
+            HashSet<string> set = new HashSet<string>();
+            int len = charsetstring.Length, startpos;
+            bool isneg;
+            if (charsetstring[0] == '^') {
+                isneg = true;
+                startpos = 1;
+            }
+            else {
+                isneg = false;
+                startpos = 0;
+            }
+            //加入集合
+            for (int i = startpos; i < len; i++) {
+                //预读下一字符，如果为连字符则
+                if ((i + 1) < len && charsetstring[i + 1] == '-') {
+                    for (int j = charsetstring[i]; j <= charsetstring[i + 2]; j++)
+                        set.Add(((char)j).ToString());
+                    i += 2;
+                }
+                else set.Add(charsetstring[i].ToString());
+            }
+            //取反标准ASCII的128个字符
+            if (isneg) {
+                HashSet<string> temp = new HashSet<string>();
+                for (int i = 0; i <= 127; i++) {
+                    if (!set.Contains(((char)i).ToString()))
+                        temp.Add(((char)i).ToString());
+                }
+                set = temp;
+            }
+            return set;
+        }
+        //生成单独一个case
+        private static string GetOneCase(List<string> input) {
+            //生成到读入后
+            string read = "c=input[pos++];\n";
+            string state;
+            bool canEnd = input[0][0] == '+' ? true : false;
+            if (canEnd)
+                state = input[0].Substring(2);
+            else state = input[0];
+            string code = "case " + state + ":\n";
+            code += read;
+
+            //生成字符判断
+            int pos = 1;
+            string judge="";
+            for(int i = 0; i < mychars.Count; i++) {
+                if (input[pos+i].Length>0) {
+                    judge = "if(c=='" + mychars[i] + "')\n    {state=" + input[pos + i] + ";isMatch=true;}\n";
+                    code += judge;
+                }
+            }
+
+            //生成字符集判断
+            pos += mychars.Count;
+            for(int i = 0; i < mycharstrings.Count; i++) {
+                if (input[pos + i].Length > 0) {
+                    HashSet<string> set = GetRealCharStringSet(mycharstrings[i]);
+                    judge = "if(";
+                    foreach (var ch in set) {
+                        judge += "c=='" + ch + "'||";
+                    }
+                    judge = judge.Substring(0, judge.Length - 2);
+                    judge += ")\n    {state=" + input[pos + i] + ";isMatch=true;}\n";
+                    code += judge;
+                }
+            }
+
+            //生成结束判断
+            if (canEnd)
+                code += "if(c=='\\0')\n    {state=-1;isMatch=true;}\n";
+            code += "if(!isMatch)\n    {state=-2;}\n";
+            code += "break;\n\n";
+            return code;
+        }
+        //生成代码
+        public static string GetCode() {
+            string res, template;
+            StreamReader reader = new StreamReader(@"F:\Project\NFA2DFA2C\NFA2DFA2C\template.txt");
+            template = reader.ReadToEnd();
+            reader.Close();
+
+            string mycases = "";
+            for(int i = 0; i < dfanodes_min.Count; i++) {
+                string mycase = GetOneCase(dfanodes_min[i]);
+                mycases += mycase;
+            }
+            res = template.Replace("{0}", mycases);
+
+
+            return res;
         }
 
         public static void Clear() {
