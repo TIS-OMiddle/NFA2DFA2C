@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -72,6 +73,18 @@ namespace NFA2DFA2C {
         private void bt_rm_Click(object sender, RoutedEventArgs e) {
             if (lv_tag.SelectedIndex > -1) {
                 mytags.RemoveAt(lv_tag.SelectedIndex);
+            }
+        }
+
+        private void bt_save_Click(object sender, RoutedEventArgs e) {
+            Microsoft.Win32.SaveFileDialog sfd = new Microsoft.Win32.SaveFileDialog();
+            sfd.InitialDirectory = AppDomain.CurrentDomain.BaseDirectory;
+            sfd.Filter = "c源文件|*.c";
+            sfd.FileName = "code";
+            if (true == sfd.ShowDialog()) {
+                string localFilePath = sfd.FileName.ToString();
+                string context = tb_output.Text;
+                File.WriteAllText(localFilePath, context);
             }
         }
     }

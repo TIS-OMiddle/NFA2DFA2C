@@ -323,7 +323,7 @@ namespace NFA2DFA2C {
         public static string GetCode() {
             string res;
             if (template == null) {
-                StreamReader reader = new StreamReader(@"F:\Project\NFA2DFA2C\NFA2DFA2C\template.txt");
+                StreamReader reader = new StreamReader("template.txt");
                 template = reader.ReadToEnd();
                 reader.Close();
             }
