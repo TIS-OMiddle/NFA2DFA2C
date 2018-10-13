@@ -11,8 +11,8 @@
     switch (state)
     {
 {0}
-    }
-  }
+    }//end switch
+  }//end while
   
   if (state == -1)
     return true;

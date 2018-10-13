@@ -19,7 +19,6 @@ namespace NFA2DFA2C {
         public int edge = -3;//-3:无边，-2有字符集合charset，-1为ε，其他则为该边字符
         public NfaNode next1;//连线节点1
         public NfaNode next2;//连线节点2
-        public HashSet<int> charset;//字符集
         public string charsetstring;//字符集对应的正则字符串
         public int nodenum;//节点编号
         public int deep;//节点深度
@@ -119,44 +118,10 @@ namespace NFA2DFA2C {
         //由字符串表示的字符集构建单个自动机
         private static NfaPair CreatNfaPair(string charsetstring) {
             NfaPair np = new NfaPair();
-            bool isneg;
-            int startpos;
-            if (charsetstring[0] == '^') {
-                isneg = true;
-                startpos = 1;
-            }
-            else {
-                isneg = false;
-                startpos = 0;
-            }
-
             NfaNode s = new NfaNode(), e = new NfaNode();
             s.edge = -2;
             s.charsetstring = charsetstring;
-            HashSet<int> set = new HashSet<int>();
-            int len = charsetstring.Length;
-            //加入集合
-            for (int i = startpos; i < len; i++) {
-                //预读下一字符，如果为连字符则
-                if ((i + 1) < len && charsetstring[i + 1] == '-') {
-                    for (int j = charsetstring[i]; j <= charsetstring[i + 2]; j++)
-                        set.Add((int)j);
-                    i += 2;
-                }
-                else set.Add((int)charsetstring[i]);
-            }
-            //取反标准ASCII的128个字符
-            if (isneg) {
-                HashSet<int> temp = new HashSet<int>();
-                for (int i = 0; i <= 127; i++) {
-                    if (!set.Contains(i))
-                        temp.Add(i);
-                }
-                set = temp;
-            }
-            s.charset = set;
             s.next1 = e;
-
             np.start = s;
             np.end = e;
             np.count += 2;

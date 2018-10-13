@@ -44,7 +44,7 @@ namespace NFA2DFA2C {
                     str += "}";
                     if (str.Length == 1)
                         str = isEnd ? "AC" : "ERROR";
-                    res[j+1] = str;
+                    res[j + 1] = str;
                 }
 
                 return res;
@@ -63,7 +63,7 @@ namespace NFA2DFA2C {
         public static List<List<string>> dfanodes_min = new List<List<string>>();
         //判断集合是否在队列
         private static bool FindInQueue(HashSet<int> set) {
-            for(int i = 0; i < queue.Count; i++) {
+            for (int i = 0; i < queue.Count; i++) {
                 if (EqualSet(queue[i], set))
                     return true;
             }
@@ -86,7 +86,7 @@ namespace NFA2DFA2C {
             bool aIsEnd = a[0][0] == '+' ? true : false,
                 bIsEnd = aIsEnd = b[0][0] == '+' ? true : false;
             if (aIsEnd == bIsEnd) {
-                for(int i = 1; i < a.Count; i++) {
+                for (int i = 1; i < a.Count; i++) {
                     if (a[i] != b[i]) {
                         return false;
                     }
@@ -97,8 +97,8 @@ namespace NFA2DFA2C {
             return false;
         }
         //最小化节点变换
-        private static void ReplaceDfa_MIN(string a,string b) {
-            for(int i = 0; i < dfanodes_min.Count; i++) {
+        private static void ReplaceDfa_MIN(string a, string b) {
+            for (int i = 0; i < dfanodes_min.Count; i++) {
                 for (int j = 0; j < dfanodes_min[0].Count; j++)
                     dfanodes_min[i][j] = dfanodes_min[i][j].Replace(a, b);
             }
@@ -150,7 +150,7 @@ namespace NFA2DFA2C {
             }
         }
         //显示Dfa
-        public static void DrawDfa(ListView lv,NfaPair np) {
+        public static void DrawDfa(ListView lv, NfaPair np) {
             GetAllDfaNode(np);
 
             int totalColumn = NfaManager.chars.Count + NfaManager.charstrings.Count, counts = 0;
@@ -159,7 +159,7 @@ namespace NFA2DFA2C {
             gv.Columns.Clear();
             GridViewColumn col = new GridViewColumn();
             col.Header = "集合";
-            col.DisplayMemberBinding = new Binding(string.Format("DATA[{0}]",counts++));
+            col.DisplayMemberBinding = new Binding(string.Format("DATA[{0}]", counts++));
             gv.Columns.Add(col);
             foreach (var item in NfaManager.chars) {
                 GridViewColumn c = new GridViewColumn();
@@ -288,9 +288,9 @@ namespace NFA2DFA2C {
 
             //生成字符判断
             int pos = 1;
-            string judge="";
-            for(int i = 0; i < mychars.Count; i++) {
-                if (input[pos+i].Length>0) {
+            string judge = "";
+            for (int i = 0; i < mychars.Count; i++) {
+                if (input[pos + i].Length > 0) {
                     judge = "if(c=='" + mychars[i] + "')\n    {state=" + input[pos + i] + ";isMatch=true;}\n";
                     code += judge;
                 }
@@ -298,7 +298,7 @@ namespace NFA2DFA2C {
 
             //生成字符集判断
             pos += mychars.Count;
-            for(int i = 0; i < mycharstrings.Count; i++) {
+            for (int i = 0; i < mycharstrings.Count; i++) {
                 if (input[pos + i].Length > 0) {
                     HashSet<string> set = GetRealCharStringSet(mycharstrings[i]);
                     judge = "if(";
@@ -319,19 +319,22 @@ namespace NFA2DFA2C {
             return code;
         }
         //生成代码
+        private static string template = null;
         public static string GetCode() {
-            string res, template;
-            StreamReader reader = new StreamReader(@"F:\Project\NFA2DFA2C\NFA2DFA2C\template.txt");
-            template = reader.ReadToEnd();
-            reader.Close();
+            string res;
+            if (template == null) {
+                StreamReader reader = new StreamReader(@"F:\Project\NFA2DFA2C\NFA2DFA2C\template.txt");
+                template = reader.ReadToEnd();
+                reader.Close();
+            }
 
+            //全部拼接
             string mycases = "";
-            for(int i = 0; i < dfanodes_min.Count; i++) {
+            for (int i = 0; i < dfanodes_min.Count; i++) {
                 string mycase = GetOneCase(dfanodes_min[i]);
                 mycases += mycase;
             }
             res = template.Replace("{0}", mycases);
-
 
             return res;
         }
@@ -341,6 +344,8 @@ namespace NFA2DFA2C {
             queue = new List<HashSet<int>>();
             dfanodes = new List<DfaNode>();
             dfanodes_min = new List<List<string>>();
+            mychars = new List<string>();
+            mycharstrings = new List<string>();
         }
     }
 }
