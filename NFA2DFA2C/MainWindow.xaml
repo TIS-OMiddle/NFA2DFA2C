@@ -52,7 +52,11 @@
                 </ListView>
             </ScrollViewer>
 
-            <Label Grid.Row="6">生成代码:</Label>
+            <StackPanel Grid.Row="6" Orientation="Horizontal">
+            <Label>生成代码:</Label>
+                <Button Name="bt_save" Width="100" Margin="10,0,0,0"
+                    Click="bt_save_Click">导出生成代码</Button>
+            </StackPanel>
             <ScrollViewer Grid.Row="7"
                 HorizontalScrollBarVisibility="Auto" 
                 VerticalScrollBarVisibility="Auto">
@@ -91,10 +95,11 @@
                     </GridView>
                 </ListView.View>
             </ListView>
-            <StackPanel HorizontalAlignment="Right">
-                <Button Name="bt_save" Width="100"
-                    Margin="0,5,10,0" Click="bt_save_Click">保存代码到文件</Button>
+            <StackPanel Margin="0,2,0,0" Orientation="Horizontal" HorizontalAlignment="Right">
+                <Button Width="40" Height="24" Margin="5,0,0,0" Name="bt_import" Click="bt_import_Click">导入</Button>
+                <Button Width="40" Height="24" Margin="5,0,10,0" Name="bt_export" Click="bt_export_Click">导出</Button>
             </StackPanel>
+
         </StackPanel>
     </Grid>
 </Window>

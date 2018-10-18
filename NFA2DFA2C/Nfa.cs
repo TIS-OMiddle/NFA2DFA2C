@@ -275,17 +275,17 @@ namespace NFA2DFA2C {
             }
             return npstack.Pop();
         }
-        //栈外操作符优先度
+        //栈内操作符优先度
         private static int Isp(char c) {
             switch (c) {
                 case '\n': return 0;//最低，后面任何符号都可以进栈
                 case '(': return 1;
                 case '|': return 3;
                 case '\r': return 5;
-                case '*': return 5;
-                case '+': return 5;
-                case '?': return 5;
-                case ')': return 7;
+                case '*': return 7;
+                case '+': return 7;
+                case '?': return 7;
+                case ')': return 8;
                 default: return -1;
             }
         }
@@ -299,7 +299,7 @@ namespace NFA2DFA2C {
                 case '*': return 6;
                 case '+': return 6;
                 case '?': return 6;
-                case '(': return 7;
+                case '(': return 8;
                 default: return -1;
             }
         }
