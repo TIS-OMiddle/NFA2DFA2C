@@ -558,6 +558,8 @@ namespace NFA2DFA2C {
             NfaNode.totalNfaNode = 0;
             chars = new HashSet<int>();
             charstrings = new HashSet<string>();
+            opstack = new Stack<char>();
+            npstack = new Stack<NfaPair>();
         }
     }
 }

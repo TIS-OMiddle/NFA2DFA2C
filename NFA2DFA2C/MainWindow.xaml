@@ -5,7 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:NFA2DFA2C"
         mc:Ignorable="d"
-        Title="正则表达式" Height="800" Width="1000">
+        Title="XLEX" Height="800" Width="1000">
     <Grid>
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="5*" MinWidth="100"/>
