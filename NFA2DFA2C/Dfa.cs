@@ -82,7 +82,7 @@ namespace NFA2DFA2C {
         }
         //返回在minnode的序号
         private static int FindInMinNode(string nodenum) {
-            for(int i = 0; i < dfanodes_min.Count; i++) {
+            for (int i = 0; i < dfanodes_min.Count; i++) {
                 string num = dfanodes_min[i][0];
                 if (num[0] == '+') {
                     num = num.Substring(2);
@@ -93,7 +93,7 @@ namespace NFA2DFA2C {
             return -1;
         }
         //判断节点是否在相同s0,s1,s2..集合
-        private static bool InSameSet(string n1,string n2) {
+        private static bool InSameSet(string n1, string n2) {
             int pos = 0;
             for (; pos < min_queue.Count; pos++) {
                 if (min_queue[pos].Contains(n1))
@@ -107,7 +107,7 @@ namespace NFA2DFA2C {
                 bIsEnd = aIsEnd = b[0][0] == '+' ? true : false;
             if (aIsEnd == bIsEnd) {
                 for (int i = 1; i < a.Count; i++) {
-                    if (!a[i].Equals(b[i])&&!InSameSet(a[i],b[i])) {
+                    if (!a[i].Equals(b[i]) && !InSameSet(a[i], b[i])) {
                         return false;
                     }
                 }
@@ -123,7 +123,7 @@ namespace NFA2DFA2C {
                     dfanodes_min[i][j] = dfanodes_min[i][j].Replace(a, b);
             }
         }
-        
+
         //Nfa到Dfa
         private static void GetAllDfaNode(NfaPair np) {
             int pos = 0, totalColumn = NfaManager.chars.Count + NfaManager.charstrings.Count;
@@ -198,7 +198,7 @@ namespace NFA2DFA2C {
             }
             lv.ItemsSource = dfanodes;
         }
-        
+
         //Dfa到最小化Dfa
         private static void GetAllDfaNodeMin() {
             HashSet<string> notEndSet = new HashSet<string>();//非终态集合
@@ -235,32 +235,50 @@ namespace NFA2DFA2C {
             }
 
             //s0,s1集合放入队列
-            if(notEndSet.Count>0)
+            if (notEndSet.Count > 0)
                 min_queue.Add(notEndSet);
-            if(isEndSet.Count>0)
+            if (isEndSet.Count > 0)
                 min_queue.Add(isEndSet);
 
-            for (int i = 0; i < min_queue.Count; i++) {
-                HashSet<string> hashset = min_queue[i];
-                if (hashset.Count == 1) continue;
-                string[] strs = hashset.ToArray<string>();
-                int node1 = FindInMinNode(strs[0]);
-                HashSet<string> newset = new HashSet<string>();
-                for (int j = 1; j < strs.Length; j++) {
-                    int node2 = FindInMinNode(strs[j]);
-                    if (EqualDfaNode_MIN(dfanodes_min[node1], dfanodes_min[node2])) {
-                        //两行相等，删除一行，替换该行节点
-                        dfanodes_min.RemoveAt(node2);
-                        ReplaceDfa_MIN(strs[j], strs[0]);
+            //借助集合队列，最小化
+            int oldCount;
+            do {
+                oldCount = min_queue.Count;
+                for (int i = oldCount - 1; i >= 0; --i) {
+                    HashSet<string> hashset = min_queue[i];
+                    if (hashset.Count < 2) continue;
+                    string[] strs = hashset.ToArray<string>();
+                    int node1 = FindInMinNode(strs[0]);
+                    HashSet<string> newset = new HashSet<string>();
+                    min_queue.Add(newset);
+                    for (int j = 1; j < strs.Length; j++) {
+                        int node2 = FindInMinNode(strs[j]);
+                        if (EqualDfaNode_MIN(dfanodes_min[node1], dfanodes_min[node2])) {
+                            //两行相等，跳过
+                        }
+                        else {
+                            //两行不等，放入新集合
+                            hashset.Remove(strs[j]);
+                            newset.Add(strs[j]);
+                        }
                     }
-                    else {
-                        //两行不等，放入新集合
-                        hashset.Remove(strs[j]);
-                        newset.Add(strs[j]);
+                    if (newset.Count == 0) {
+                        min_queue.RemoveAt(min_queue.Count - 1);
                     }
                 }
-                if (newset.Count > 0) {
-                    min_queue.Add(newset);
+            } while (oldCount != min_queue.Count);
+
+            //集合留一个
+            for (int i = 0; i < min_queue.Count; i++) {
+                HashSet<string> hashset = min_queue[i];
+                if (hashset.Count < 2) continue;
+                string[] strs = hashset.ToArray<string>();
+                int node1 = FindInMinNode(strs[0]);
+                for (int j = 1; j < strs.Length; j++) {
+                    //同一集合节点相等，删除其余节点并替换
+                    int node2 = FindInMinNode(strs[j]);
+                    dfanodes_min.RemoveAt(node2);
+                    ReplaceDfa_MIN(strs[j], strs[0]);
                 }
             }
         }
@@ -290,7 +308,7 @@ namespace NFA2DFA2C {
             }
             lv.ItemsSource = dfanodes_min;
         }
-        
+
         //由字符集字符串生成真正的字符集
         private static HashSet<string> GetRealCharStringSet(string charsetstring) {
             HashSet<string> set = new HashSet<string>();
